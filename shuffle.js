@@ -1,6 +1,4 @@
-<<<<<<< HEAD
 
-=======
 var shuffle = function(array) {
   var m = array.length, t, i;
 
@@ -18,6 +16,5 @@ var shuffle = function(array) {
 
   return array;
 }
->>>>>>> 0a548b044445a7c4ffca68264ad3b78ac31ab408
 
 module.exports = shuffle;
