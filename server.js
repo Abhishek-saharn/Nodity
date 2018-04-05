@@ -3,6 +3,7 @@ var cards = require('./cards.js');
 var shortid = require('shortid');
 
 var deck_of_cards = cards.shuffle();
+var shuffle = require('./shuffle.js');
 
 console.log("server Connected");
 var players = [];
@@ -47,6 +48,13 @@ io.on('connection', function(socket) {
         socket.emit('spawn',{id : playerID});
     });
 
+    playersCount++;
+    
+    console.log("Client Connected");
+ 
+
+    socket.emit('connectionBegin',tableValue);
+    
     socket.on('move', function(data) {
         tableValue.money = data.tableValue;
         player.player_value = data.playerValue;
@@ -93,6 +101,10 @@ io.on('connection', function(socket) {
 
     socket.on('disconnect', function() {
         players.splice(players.indexOf(playerId),1);
+        if (players.length == 0)
+            {
+                tableValue.money = 0;
+            }
         console.log("Player Disconnected");
         socket.broadcast.emit('disconnected',{id : playerId});
     });
