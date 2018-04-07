@@ -7,8 +7,6 @@ var shuffle = require('./shuffle.js');
 
 console.log("server Connected");
 var players = [];
-var playersCount = 0;
-
 var tableValue = {
               money: 0
             };
@@ -18,8 +16,14 @@ var tableValue = {
 io.on('connection', function(socket) {
 
    
+
+   /*
+    socket.emit('logIn',function(data){
+        console.log(JSON.stringify(data));
+     });
+
+   */
     var playerId = shortid.generate();
-    players.push(playerId);
 
     var player = {
         id: playerId,
@@ -29,31 +33,33 @@ io.on('connection', function(socket) {
         card3:deck_of_cards[2]
     };
 
+
+    players.push(player);
+
     var data = {
             table_data : tableValue,
             player_data : player
     };
+
    // players[playerId] = player
     console.log("Client Connected");
     
 
     socket.emit('connectionBegin',data);
     
-    socket.broadcast.emit('spawn',{id:playerId});
+    /*socket.broadcast.emit('spawn',{id:playerId});
 
-    players.forEach(function(playerID){
+    players.forEach(player => {
 
-        if(playerID == playerId)
+        if(player.id == playerId)
            return;
-        socket.emit('spawn',{id : playerID});
+        socket.emit('spawn',{id : player.id});
     });
-
-    playersCount++;
     
+    */
     console.log("Client Connected");
  
-
-    socket.emit('connectionBegin',tableValue);
+    //socket.emit('connectionBegin',tableValue);
     
     socket.on('move', function(data) {
         tableValue.money = data.tableValue;
@@ -67,8 +73,8 @@ io.on('connection', function(socket) {
             chipValue: chip_value
         };
         socket.broadcast.emit('move', resdata );
-        console.log('Client played Moved with Data:');
-        console.log('Client played Moved with Data:' + JSON.stringify(data));
+        //console.log('Client played Moved with Data:');
+        //console.log('Client played Moved with Data:' + JSON.stringify(data));
         
     });
     
@@ -78,18 +84,28 @@ io.on('connection', function(socket) {
             playerValue: data.playerValue
         };
         socket.broadcast.emit('NewPlayerAdd', n_res_data );
-        players.forEach(function(playerID){
+        players.forEach(player=>{
 
-            if(playerID == playerId)
+            if(playerId == player.id)
                return;
-            var n_res_data = {
-                playerID: playerID,
-                playerValue: playerValue
-            };   
-            socket.emit('NewPlayerAdd',n_res_data);
+            var playerToAdd = {
+                playerID: player.id,
+                playerValue: player.player_value
+            };  
+            console.log('Client connected with Data:' + JSON.stringify(playerToAdd));
+            
+            socket.emit('NewPlayerAdd',playerToAdd);
         });
         
     });
+
+
+
+
+
+    
+    
+    
 
     socket.on('updateTableValue', function(data) {
         tableValue.money = data.tableValue;
