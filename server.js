@@ -1,7 +1,7 @@
-var shuffle = require('./utilities/shuffle');
-var rank = require('./algorithm/rank');
-var shortid = require('shortid');
-var io = require('socket.io')(process.env.PORT || 3000);
+const shuffle = require('./utilities/shuffle');
+const rank = require('./algorithm/rank');
+const shortid = require('shortid');
+const io = require('socket.io')(process.env.PORT || 3000);
 
 console.log("server Connected");
 
@@ -17,12 +17,12 @@ var tableValue = {
 io.on('connection', function(socket) {
     console.log("Client Connected");
 
-    
-    socket.on('SignUp',function(data){
-         console.log(JSON.stringify(data));
-      });
 
-    
+    socket.on('SignUp', function(data) {
+        console.log(JSON.stringify(data));
+    });
+
+
 
     var playerId = shortid.generate();
 
@@ -31,8 +31,8 @@ io.on('connection', function(socket) {
     sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
         return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
     });
-   
-    console.log("sorted cards " + sorted_deck_of_cards );
+
+    console.log("sorted cards " + sorted_deck_of_cards);
 
     var player = {
         id: playerId,
