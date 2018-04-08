@@ -3,9 +3,9 @@ const userController = {
     insert: function(data) {
         console.log(`In controller.`);
         const signupData = {
-            userName: data.UserName,
-            email: data.Email,
-            password: data.Password,
+            userName: data.userName,
+            email: data.email,
+            password: data.password,
         }
 
         return new Promise((resolve, reject) => {
@@ -16,9 +16,10 @@ const userController = {
 
     },
     find: function(data) {
+        console.log(data)
         const loginData = {
-            email: data.Email,
-            password: data.Password,
+            email: data.email,
+            password: data.password,
         }
 
         return new Promise((resolve, reject) => {

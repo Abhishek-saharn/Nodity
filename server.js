@@ -32,10 +32,12 @@ io.on('connection', function(socket) {
 
 
     socket.on('SignUp', function(data) {
-        console.log(`In Signup. ${JSON.stringify(data)}`);
         userController.insert(data)
             .then(successData => {
                 console.log(`SignupSuccess`);
+                player['name'] = successData.userName;
+                player.player_value = successData.currentMoney;
+                console.log(player)
                 socket.emit('signupSuccess');
             })
             .catch(error => {
@@ -45,10 +47,12 @@ io.on('connection', function(socket) {
     });
 
     socket.on('Login', function(data) {
-        console.log(`In Signup. ${JSON.stringify(data)}`);
         userController.find(data)
             .then(successData => {
                 console.log(successData);
+                player['name'] = successData.userName;
+                player.player_value = successData.currentMoney;
+                console.log(player)
                 socket.emit('loginSuccess');
             })
             .catch(error => {
