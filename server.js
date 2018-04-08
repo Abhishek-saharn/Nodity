@@ -17,12 +17,12 @@ var tableValue = {
 io.on('connection', function(socket) {
     console.log("Client Connected");
 
-    /*
-     socket.emit('logIn',function(data){
+    
+    socket.on('SignUp',function(data){
          console.log(JSON.stringify(data));
       });
 
-    */
+    
 
     var playerId = shortid.generate();
 
