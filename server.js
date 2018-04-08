@@ -30,7 +30,10 @@ io.on('connection', function(socket) {
     var unsorted_deck_of_cards = deck_of_cards.slice(0, 3);
     sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
         return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
-    })
+    });
+   
+    console.log("sorted cards " + sorted_deck_of_cards );
+
     var player = {
         id: playerId,
         player_value: 1000,

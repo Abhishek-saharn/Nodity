@@ -13,10 +13,10 @@ suits.forEach(function(suit) {
     })
 });
 cards.forEach(function(card) {
-    if (card.suit == 'c' || card.suit == 'd') {
+    if (card.suit == 'c' || card.suit == 's') {
         card['color'] = 'black';
     }
-    if (card.suit == 's' || card.suit == 'h') {
+    if (card.suit == 'd' || card.suit == 'h') {
         card['color'] = 'red';
     }
 });
