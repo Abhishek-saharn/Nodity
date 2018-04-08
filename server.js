@@ -1,9 +1,22 @@
 const shuffle = require('./utilities/shuffle');
 const rank = require('./algorithm/rank');
+const userController = require('./app_controller/userController');
 const shortid = require('shortid');
+var mongoose = require("mongoose");
+mongoose.Promise = global.Promise;
+const config = require('./config.js');
 const io = require('socket.io')(process.env.PORT || 3000);
 
 console.log("server Connected");
+
+mongoose.connect(config.database, function(error) {
+    if (error) {
+        console.log('Please make sure mongo DB is running');
+        throw error;
+    } else {
+        console.log('Mongo is running')
+    }
+});
 
 var deck_of_cards = shuffle();
 
@@ -19,16 +32,31 @@ io.on('connection', function(socket) {
 
 
     socket.on('SignUp', function(data) {
-        console.log(JSON.stringify(data.UserName));
-        console.log(JSON.stringify(data.Email));
-        console.log(JSON.stringify(data.Password));
+        console.log(`In Signup. ${JSON.stringify(data)}`);
+        userController.insert(data)
+            .then(successData => {
+                console.log(`SignupSuccess`);
+                socket.emit('signupSuccess');
+            })
+            .catch(error => {
+                socket.emit('error', { errorMessage: "Something wrong has happened. Try again." })
+            });
+
     });
 
-    socket.on('SignUp', function(data) {
-        console.log(JSON.stringify(data));
+    socket.on('Login', function(data) {
+        console.log(`In Signup. ${JSON.stringify(data)}`);
+        userController.find(data)
+            .then(successData => {
+                console.log(successData);
+                socket.emit('loginSuccess');
+            })
+            .catch(error => {
+                console.log(error);
+                socket.emit('error', { errorMessage: error });
+            })
+
     });
-
-
 
     var playerId = shortid.generate();
 
@@ -38,7 +66,7 @@ io.on('connection', function(socket) {
         return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
     });
 
-    console.log("sorted cards " + sorted_deck_of_cards);
+    // console.log("sorted cards " + sorted_deck_of_cards);
 
     var player = {
         id: playerId,
@@ -56,7 +84,7 @@ io.on('connection', function(socket) {
         table_data: tableValue,
         player_data: player
     };
-    console.log(players);
+    //console.log(players);
     var winner = rank(players);
 
     console.log(winner + " is the winner");
@@ -65,7 +93,6 @@ io.on('connection', function(socket) {
 
 
 
-    console.log("Client Connected");
 
     socket.on('move', function(data) {
         tableValue.money = data.tableValue;
