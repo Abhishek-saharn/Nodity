@@ -19,7 +19,9 @@ io.on('connection', function(socket) {
 
     
     socket.on('SignUp',function(data){
-         console.log(JSON.stringify(data));
+         console.log(JSON.stringify(data.UserName));
+         console.log(JSON.stringify(data.Email));
+         console.log(JSON.stringify(data.Password));
       });
 
     
