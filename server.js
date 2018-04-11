@@ -37,7 +37,7 @@ io.on('connection', function(socket) {
                 console.log(`SignupSuccess`);
                 player['name'] = successData.userName;
                 player.player_value = successData.currentMoney;
-                console.log(player)
+                //console.log(player)
                 socket.emit('signupSuccess');
             })
             .catch(error => {
@@ -52,7 +52,7 @@ io.on('connection', function(socket) {
                 console.log(successData);
                 player['name'] = successData.userName;
                 player.player_value = successData.currentMoney;
-                console.log(player)
+                //console.log(player)
                 socket.emit('loginSuccess');
             })
             .catch(error => {
@@ -84,7 +84,7 @@ io.on('connection', function(socket) {
 
     deck_of_cards.splice(0, 3);
 
-    var data = {
+    var i_data = {
         table_data: tableValue,
         player_data: player
     };
@@ -93,9 +93,12 @@ io.on('connection', function(socket) {
 
     console.log(winner + " is the winner");
 
-    socket.emit('connectionBegin', data);
+    //socket.emit('connectionBegin', init_data);
 
-
+    socket.on('play',function(init_data){
+        console.log("sending data with player : " + i_data);
+        socket.emit('connectionBegin', i_data); 
+    });
 
 
     socket.on('move', function(data) {
@@ -110,12 +113,14 @@ io.on('connection', function(socket) {
             chipValue: chip_value
         };
         socket.broadcast.emit('move', resdata);
+        socket.broadcast.emit('moveChip');
 
     });
 
     socket.on('NewPlayerAdd', function(data) {
         var n_res_data = {
             playerID: player.id,
+            playerName: player.name,
             playerValue: data.playerValue
         };
         socket.broadcast.emit('NewPlayerAdd', n_res_data);
@@ -125,6 +130,7 @@ io.on('connection', function(socket) {
                 return;
             var playerToAdd = {
                 playerID: player.id,
+                playerName: player.name,
                 playerValue: player.player_value
             };
             console.log('Client connected with Data:' + JSON.stringify(playerToAdd));
