@@ -99,12 +99,12 @@ io.on('connection', function(socket) {
         console.log("sending data with player : " + i_data);
         socket.emit('connectionBegin', i_data); 
     });
-
+    
 
     socket.on('move', function(data) {
         tableValue.money = data.tableValue;
         player.player_value = data.playerValue;
-        console.log('Client moved Table Value : ' + JSON.stringify(tableValue.money));
+        console.log('Client moved ');
         var chip_value = data.chipValue;
         var resdata = {
             tableValue: tableValue.money,
@@ -112,18 +112,20 @@ io.on('connection', function(socket) {
             playerValue: player.player_value,
             chipValue: chip_value
         };
+        console.log('Client moved Table Value : ' + resdata.playerID);
         socket.broadcast.emit('move', resdata);
-        socket.broadcast.emit('moveChip');
+        
+        //socket.broadcast.emit('moveChip');
 
     });
 
-    socket.on('NewPlayerAdd', function(data) {
+    socket.on('newPlayerAdd', function(data) {
         var n_res_data = {
             playerID: player.id,
             playerName: player.name,
             playerValue: data.playerValue
         };
-        socket.broadcast.emit('NewPlayerAdd', n_res_data);
+        socket.broadcast.emit('newPlayerAdd', n_res_data);
         players.forEach(player => {
 
             if (playerId == player.id)
@@ -135,7 +137,7 @@ io.on('connection', function(socket) {
             };
             console.log('Client connected with Data:' + JSON.stringify(playerToAdd));
 
-            socket.emit('NewPlayerAdd', playerToAdd);
+            socket.emit('newPlayerAdd', playerToAdd);
         });
 
     });
