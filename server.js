@@ -29,16 +29,17 @@ var tableValue = {
 
 io.on('connection', function(socket) {
     console.log("Client Connected");
-
+    var playerName = "";
+    var playerValue = "";
 
     socket.on('SignUp', function(data) {
         userController.insert(data)
             .then(successData => {
                 console.log(`SignupSuccess`);
-                player['name'] = successData.userName;
-                player.player_value = successData.currentMoney;
+                playerName = successData.userName;
+                playerValue = successData.currentMoney;
                 //console.log(player)
-                socket.emit('signupSuccess');
+                socket.emit('signupSuccess', successData);
             })
             .catch(error => {
                 socket.emit('error', { errorMessage: "Something wrong has happened. Try again." })
@@ -50,10 +51,10 @@ io.on('connection', function(socket) {
         userController.find(data)
             .then(successData => {
                 console.log(successData);
-                player['name'] = successData.userName;
-                player.player_value = successData.currentMoney;
+                playerName = successData.userName;
+                playerValue = successData.currentMoney;
                 //console.log(player)
-                socket.emit('loginSuccess');
+                socket.emit('loginSuccess', successData);
             })
             .catch(error => {
                 console.log(error);
@@ -62,44 +63,36 @@ io.on('connection', function(socket) {
 
     });
 
-    var playerId = shortid.generate();
+    socket.on('play', function(data) {
 
-    // Crop first three elements and and push them to after sorting.
-    var unsorted_deck_of_cards = deck_of_cards.slice(0, 3);
-    sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
-        return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
+        var playerId = shortid.generate();
+        // Crop first three elements and and push them to after sorting.
+        var unsorted_deck_of_cards = deck_of_cards.slice(0, 3);
+        sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
+            return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
+        });
+
+        var player = {
+            id: playerId,
+            name: playerName,
+            player_value: playerValue,
+            card1: sorted_deck_of_cards[0],
+            card2: sorted_deck_of_cards[1],
+            card3: sorted_deck_of_cards[2],
+
+        };
+        players.push(player);
+        console.log(players);
+        deck_of_cards.splice(0, 3);
+
+        var i_data = {
+            table_data: tableValue,
+            player_data: player
+        };
+        socket.emit('connectionBegin', i_data);
+        var winner = rank(players);
+        console.log(winner + " is the winner");
     });
-
-    // console.log("sorted cards " + sorted_deck_of_cards);
-
-    var player = {
-        id: playerId,
-        player_value: 1000,
-        card1: sorted_deck_of_cards[0],
-        card2: sorted_deck_of_cards[1],
-        card3: sorted_deck_of_cards[2],
-
-    };
-    players.push(player);
-
-    deck_of_cards.splice(0, 3);
-
-    var i_data = {
-        table_data: tableValue,
-        player_data: player
-    };
-    //console.log(players);
-    var winner = rank(players);
-
-    console.log(winner + " is the winner");
-
-    //socket.emit('connectionBegin', init_data);
-
-    socket.on('play',function(init_data){
-        console.log("sending data with player : " + i_data);
-        socket.emit('connectionBegin', i_data); 
-    });
-    
 
     socket.on('move', function(data) {
         tableValue.money = data.tableValue;
@@ -114,7 +107,7 @@ io.on('connection', function(socket) {
         };
         console.log('Client moved Table Value : ' + resdata.playerID);
         socket.broadcast.emit('move', resdata);
-        
+
         //socket.broadcast.emit('moveChip');
 
     });
