@@ -29,8 +29,10 @@ var tableValue = {
 
 io.on('connection', function(socket) {
     console.log("Client Connected");
-    var playerName = "";
-    var playerValue = "";
+    let playerName = "";
+    let playerValue = "";
+    let winnerDecided = false;
+    let nextTurn = false;
 
     socket.on('SignUp', function(data) {
         userController.insert(data)
@@ -90,8 +92,34 @@ io.on('connection', function(socket) {
             player_data: player
         };
         socket.emit('connectionBegin', i_data);
+        // let playersForMove = players,
+        //     i = 0;
+        // while (!winnerDecided) {
+        //     if (nextTurn) {
+        //         socket.emit('playerTurn', { id: playersForMove[i++].id });
+        //     }
+        //     if (i == playersForMove.length) {
+        //         i = 0;
+        //     }
+        // }
+
+
+    });
+
+    socket.on('findWinner', function(data) {
         var winner = rank(players);
+        winnerDecided = true;
         console.log(winner + " is the winner");
+    });
+    let i = 0;
+    socket.on('nextTurn', function(data) {
+        if (i == players.length) {
+            i = 0;
+        }
+        if (!winnerDecided) {
+            io.emit('playerTurn', { id: players[i++].id });
+        }
+
     });
 
     socket.on('move', function(data) {
