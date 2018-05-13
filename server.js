@@ -75,14 +75,7 @@ io.on('connection', function(socket) {
         sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
             return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
         });
-        socket.on('createNewRoom', function(data) {
-            var roomName = data.roomName;
-            rooms.roomName = {};
-            rooms.roomName.bootValue = 200;
-            rooms.roomName.activePlayers = 1;
-            console.log(rooms);
 
-        });
         player.id = playerId;
         player.name = playerName;
         player.player_value = playerValue;
