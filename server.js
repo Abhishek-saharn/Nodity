@@ -22,7 +22,7 @@ var deck_of_cards = shuffle();
 
 var players = [];
 var playersCount = 0;
-
+let i = 0;
 var tableValue = {
     money: 0
 };
@@ -54,7 +54,6 @@ io.on('connection', function(socket) {
     socket.on('Login', function(data) {
         userController.find(data)
             .then(successData => {
-                console.log(successData);
                 playerName = successData.userName;
                 playerValue = successData.currentMoney;
                 //console.log(player)
@@ -79,9 +78,11 @@ io.on('connection', function(socket) {
             player.id= playerId;
             player.name= playerName;
             player.player_value= playerValue;
+            player.cardSeen = false;
             player.card1= sorted_deck_of_cards[0];
             player.card2= sorted_deck_of_cards[1];
             player.card3= sorted_deck_of_cards[2];
+            player.playerBootValue = 100;
 
         players.push(player);
         console.log(players);
@@ -111,12 +112,14 @@ io.on('connection', function(socket) {
         winnerDecided = true;
         console.log(winner + " is the winner");
     });
-    let i = 0;
+    
     socket.on('nextTurn', function(data) {
         if (i == players.length) {
             i = 0;
         }
         if (!winnerDecided) {
+            console.log(players[i++].id);
+            i--;
             io.emit('playerTurn', { id: players[i++].id });
         }
 
@@ -156,11 +159,15 @@ io.on('connection', function(socket) {
                 playerName: player.name,
                 playerValue: player.player_value
             };
-            console.log('Client connected with Data:' + JSON.stringify(playerToAdd));
+            console.log('New player connected with Data:' + JSON.stringify(playerToAdd));
 
             socket.emit('newPlayerAdd', playerToAdd);
         });
 
+    });
+
+    socket.on('cardSeen',function(data){
+        socket.broadcast.emit('cardSeen', {id:playerId});  
     });
 
     socket.on('updateTableValue', function(data) {
