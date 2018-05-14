@@ -19,7 +19,7 @@ mongoose.connect(config.database, function(error) {
 });
 
 var deck_of_cards = shuffle();
-
+var rooms = {};
 var players = [];
 var playersCount = 0;
 let i = 0;
@@ -33,7 +33,7 @@ io.on('connection', function(socket) {
     let playerValue = "";
     let winnerDecided = false;
     let nextTurn = false;
-    let player = {};
+    let Player = {};
     let playerId = "";
 
     socket.on('SignUp', function(data) {
@@ -68,7 +68,7 @@ io.on('connection', function(socket) {
 
     socket.on('play', function(data) {
 
-        playerId = shortid.generate();
+        var playerId = shortid.generate();
         // Crop first three elements and and push them to after sorting.
         var unsorted_deck_of_cards = deck_of_cards.slice(0, 3);
         sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
@@ -177,6 +177,8 @@ io.on('connection', function(socket) {
         console.log('Client played Moved with Data:' + JSON.stringify(data));
 
     });
+
+
 
     socket.on('disconnect', function() {
         players.splice(players.indexOf(playerId), 1);
