@@ -33,7 +33,7 @@ io.on('connection', function(socket) {
     let playerValue = "";
     let winnerDecided = false;
     let nextTurn = false;
-    let Player = {};
+    let player = {};
     let playerId = "";
 
     socket.on('SignUp', function(data) {
@@ -68,7 +68,7 @@ io.on('connection', function(socket) {
 
     socket.on('play', function(data) {
 
-        var playerId = shortid.generate();
+        playerId = shortid.generate();
         // Crop first three elements and and push them to after sorting.
         var unsorted_deck_of_cards = deck_of_cards.slice(0, 3);
         sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
@@ -145,6 +145,8 @@ io.on('connection', function(socket) {
 
     socket.on('newPlayerAdd', function(data) {
         var n_res_data = {
+
+
             playerID: player.id,
             playerName: player.name,
             playerValue: data.playerValue
