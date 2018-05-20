@@ -14,7 +14,7 @@ mongoose.connect(config.database, function(error) {
         console.log('Please make sure mongo DB is running');
         throw error;
     } else {
-        console.log('Mongo is running')
+        console.log('Mongo is running');
     }
 });
 
@@ -36,6 +36,7 @@ io.on('connection', function(socket) {
     let nextTurn = false;
     let player = {};
     let playerId = "";
+    let roomName = "";
 
     socket.on('SignUp', function(data) {
         userController.insert(data)
@@ -70,21 +71,19 @@ io.on('connection', function(socket) {
     socket.on('play', function(data) {
         //console.log(data);
         playerId = shortid.generate();
-        let roomName = data.name;
+        roomName = data.name;
         let newTable = data.newTable;
         if (newTable == true) {
             availableRooms[roomName] = {};
             availableRooms[roomName].bootValue = data.bootValue;
             availableRooms[roomName].plotValue = data.plotValue;
             availableRooms[roomName].activePlayers = 1;
+            availableRooms[roomName].gameRunning = false;
+            availableRooms[roomName].playing = [];
+            availableRooms[roomName].waiting = [];
+            availableRooms[roomName].playing.push(playerId);
             availableRooms[roomName].deck_of_cards = shuffle();
             socket.join(roomName);
-
-            let unsorted_deck_of_cards = availableRooms[roomName].deck_of_cards.slice(0, 3);
-            availableRooms[roomName].sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
-                return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
-            });
-
         } else if (newTable == false) {
 
             let currentSocket = socket.rooms[Object.keys(socket.rooms)[1]];
@@ -93,6 +92,13 @@ io.on('connection', function(socket) {
             }
             socket.join(roomName);
             availableRooms[roomName].activePlayers += 1;
+            if (availableRooms[roomName].activePlayers == 2) {
+                availableRooms[roomName].gameRunning = true;
+                availableRooms[roomName].playing.push(playerId);
+            }
+            if (availableRooms[roomName].gameRunning == true) {
+                availableRooms[roomName].waiting.push(playerId);
+            }
             if (availableRooms[roomName].activePlayers == 5) {
                 fullRooms[roomName] = availableRooms[roomName];
                 delete availableRooms[roomName];
@@ -107,7 +113,10 @@ io.on('connection', function(socket) {
 
         if (currentSocket != undefined) {
 
-
+            let unsorted_deck_of_cards = availableRooms[roomName].deck_of_cards.slice(0, 3);
+            availableRooms[roomName].sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
+                return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
+            });
 
             player.id = playerId;
             player.name = playerName;
@@ -115,7 +124,7 @@ io.on('connection', function(socket) {
             player.card1 = availableRooms[roomName].sorted_deck_of_cards[0];
             player.card2 = availableRooms[roomName].sorted_deck_of_cards[1];
             player.card3 = availableRooms[roomName].sorted_deck_of_cards[2];
-
+            player.room = roomName;
             players.push(player);
             console.log(players);
             availableRooms[roomName].deck_of_cards.splice(0, 3);
@@ -135,13 +144,13 @@ io.on('connection', function(socket) {
         console.log(winner + " is the winner");
     });
     socket.on('nextTurn', function(data) {
-        if (i == players.length) {
+        if (i == availableRooms[roomName].playing.length) {
             i = 0;
         }
         if (!winnerDecided) {
-            console.log(players[i++].id);
+            console.log(availableRooms[roomName].playing[i++].id);
             i--;
-            io.emit('playerTurn', { id: players[i++].id });
+            io.to(roomName).emit('playerTurn', { id: availableRooms[roomName].playing[i++].id });
         }
 
     });
@@ -158,7 +167,7 @@ io.on('connection', function(socket) {
             chipValue: chip_value
         };
         console.log('Client moved Table Value : ' + resdata.playerID);
-        socket.broadcast.emit('move', resdata);
+        socket.broadcast.to(roomName).emit('move', resdata);
 
         //socket.broadcast.emit('moveChip');
 
@@ -170,8 +179,8 @@ io.on('connection', function(socket) {
             playerName: player.name,
             playerValue: data.playerValue
         };
-        socket.broadcast.emit('newPlayerAdd', n_res_data);
-        players.forEach(player => {
+        socket.broadcast.to(roomName).emit('newPlayerAdd', n_res_data);
+        availableRooms[roomName].playing.forEach(player => {
 
             if (playerId == player.id)
                 return;
@@ -188,12 +197,12 @@ io.on('connection', function(socket) {
     });
 
     socket.on('cardSeen', function(data) {
-        socket.broadcast.emit('cardSeen', { id: playerId });
+        socket.broadcast.to(roomName).emit('cardSeen', { id: playerId });
     });
 
     socket.on('updateTableValue', function(data) {
         tableValue.money = data.tableValue;
-        socket.broadcast.emit('move', tableValue);
+        socket.broadcast.to(roomName).emit('move', tableValue);
         console.log('Client played Moved with Data:');
         console.log('Client played Moved with Data:' + JSON.stringify(data));
 
@@ -246,7 +255,7 @@ io.on('connection', function(socket) {
         }
 
         console.log("Player Disconnected");
-        socket.broadcast.emit('disconnected', { id: playerId });
+        socket.broadcast.to(roomName).emit('disconnected', { id: playerId });
     });
 
 });
