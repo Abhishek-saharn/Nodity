@@ -2,7 +2,7 @@ const shuffle = require('./utilities/shuffle');
 const rank = require('./algorithm/rank');
 const userController = require('./app_controller/userController');
 const shortid = require('shortid');
-var mongoose = require("mongoose");
+let mongoose = require("mongoose");
 mongoose.Promise = global.Promise;
 const config = require('./config.js');
 const io = require('socket.io')(process.env.PORT || 3000);
@@ -18,15 +18,16 @@ mongoose.connect(config.database, function(error) {
     }
 });
 
-var deck_of_cards = shuffle();
-var rooms = {};
-var players = [];
-var playersCount = 0;
+let deck_of_cards = shuffle();
 
-var tableValue = {
+let players = [];
+let playersCount = 0;
+let availableRooms = {};
+let fullRooms = {};
+let tableValue = {
     money: 0
 };
-
+let i = 0;
 io.on('connection', function(socket) {
     console.log("Client Connected");
     let playerName = "";
@@ -68,50 +69,73 @@ io.on('connection', function(socket) {
     });
 
     socket.on('play', function(data) {
+        //console.log(data);
+        playerId = shortid.generate();
+        let roomName = data.name;
+        let newTable = data.newTable;
+        if (newTable == true) {
+            availableRooms[roomName] = {};
+            availableRooms[roomName].bootValue = data.bootValue;
+            availableRooms[roomName].plotValue = data.plotValue;
+            availableRooms[roomName].activePlayers = 1;
+            availableRooms[roomName].deck_of_cards = shuffle();
+            socket.join(roomName);
 
-        var playerId = shortid.generate();
+            let unsorted_deck_of_cards = availableRooms[roomName].deck_of_cards.slice(0, 3);
+            availableRooms[roomName].sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
+                return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
+            });
+
+        } else if (newTable == false) {
+
+            let currentSocket = socket.rooms[Object.keys(socket.rooms)[1]];
+            if (currentSocket != undefined) {
+                socket.leave(currentSocket);
+            }
+            socket.join(roomName);
+            availableRooms[roomName].activePlayers += 1;
+            if (availableRooms[roomName].activePlayers == 5) {
+                fullRooms[roomName] = availableRooms[roomName];
+                delete availableRooms[roomName];
+            }
+        }
+
+        console.log(`Socket's room name is ${socket.rooms[Object.keys(socket.rooms)[1]]}`);
+        let currentSocket = roomName;
+        console.log(availableRooms);
+
         // Crop first three elements and and push them to after sorting.
-        var unsorted_deck_of_cards = deck_of_cards.slice(0, 3);
-        sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
-            return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
-        });
 
-        player.id = playerId;
-        player.name = playerName;
-        player.player_value = playerValue;
-        player.card1 = sorted_deck_of_cards[0];
-        player.card2 = sorted_deck_of_cards[1];
-        player.card3 = sorted_deck_of_cards[2];
+        if (currentSocket != undefined) {
 
-        players.push(player);
-        console.log(players);
-        deck_of_cards.splice(0, 3);
 
-        var i_data = {
-            table_data: tableValue,
-            player_data: player
-        };
-        socket.emit('connectionBegin', i_data);
-        // let playersForMove = players,
-        //     i = 0;
-        // while (!winnerDecided) {
-        //     if (nextTurn) {
-        //         socket.emit('playerTurn', { id: playersForMove[i++].id });
-        //     }
-        //     if (i == playersForMove.length) {
-        //         i = 0;
-        //     }
-        // }
 
+            player.id = playerId;
+            player.name = playerName;
+            player.player_value = playerValue;
+            player.card1 = availableRooms[roomName].sorted_deck_of_cards[0];
+            player.card2 = availableRooms[roomName].sorted_deck_of_cards[1];
+            player.card3 = availableRooms[roomName].sorted_deck_of_cards[2];
+
+            players.push(player);
+            console.log(players);
+            availableRooms[roomName].deck_of_cards.splice(0, 3);
+
+            let i_data = {
+                table_data: tableValue,
+                player_data: player
+            };
+            socket.emit('connectionBegin', i_data);
+        }
 
     });
 
     socket.on('findWinner', function(data) {
-        var winner = rank(players);
+        let winner = rank(players);
         winnerDecided = true;
         console.log(winner + " is the winner");
     });
-    let i = 0;
+
     socket.on('nextTurn', function(data) {
         if (i == players.length) {
             i = 0;
@@ -126,8 +150,8 @@ io.on('connection', function(socket) {
         tableValue.money = data.tableValue;
         player.player_value = data.playerValue;
         console.log('Client moved ');
-        var chip_value = data.chipValue;
-        var resdata = {
+        let chip_value = data.chipValue;
+        let resdata = {
             tableValue: tableValue.money,
             playerID: player.id,
             playerValue: player.player_value,
@@ -141,7 +165,7 @@ io.on('connection', function(socket) {
     });
 
     socket.on('newPlayerAdd', function(data) {
-        var n_res_data = {
+        let n_res_data = {
             playerID: player.id,
             playerName: player.name,
             playerValue: data.playerValue
@@ -151,7 +175,7 @@ io.on('connection', function(socket) {
 
             if (playerId == player.id)
                 return;
-            var playerToAdd = {
+            let playerToAdd = {
                 playerID: player.id,
                 playerName: player.name,
                 playerValue: player.player_value
@@ -171,13 +195,52 @@ io.on('connection', function(socket) {
 
     });
 
+    socket.on('createNewRoom', function(data) {
 
+        // console.log(socket.availableRooms[1])
+
+    });
+    socket.on('showTable', function(data) {
+        /**
+         * Dummy data for testing purpose.
+         */
+        dummyRoom = {
+                name1: {
+                    bootValue: 10,
+                    activePlayers: 3,
+                },
+                name2: {
+                    bootValue: 50,
+                    activePlayers: 4,
+                }
+            }
+            /** */
+        let keys = Object.keys(availableRooms);
+        rooms = {
+            keys: keys,
+            availableRooms
+
+        };
+        console.log(rooms);
+
+        socket.emit('showTable', rooms);
+    });
+    socket.on('joinRoom', function(data) {
+        let roomName = data.roomName;
+        let currentSocket = socket.rooms[Object.keys(socket.rooms)[1]];
+        if (currentSocket != undefined) {
+            socket.leave(currentSocket);
+        }
+        socket.join(roomName);
+        availableRooms[roomName].activePlayers += 1;
+    });
 
     socket.on('disconnect', function() {
         players.splice(players.indexOf(playerId), 1);
         if (players.length == 0) {
             tableValue.money = 0;
         }
+
         console.log("Player Disconnected");
         socket.broadcast.emit('disconnected', { id: playerId });
     });
