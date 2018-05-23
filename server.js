@@ -81,7 +81,7 @@ io.on('connection', function(socket) {
             availableRooms[roomName].gameRunning = false;
             availableRooms[roomName].playing = [];
             availableRooms[roomName].waiting = [];
-            availableRooms[roomName].playing.push(playerId);
+            availableRooms[roomName].playing.push(player);
             availableRooms[roomName].deck_of_cards = shuffle();
             socket.join(roomName);
         } else if (newTable == false) {
@@ -94,12 +94,10 @@ io.on('connection', function(socket) {
             availableRooms[roomName].activePlayers += 1;
             if (availableRooms[roomName].activePlayers == 2) {
                 availableRooms[roomName].gameRunning = true;
-                availableRooms[roomName].playing.push(playerId);
-            }
-            if (availableRooms[roomName].gameRunning == true) {
-                availableRooms[roomName].waiting.push(playerId);
-            }
-            if (availableRooms[roomName].activePlayers == 5) {
+                availableRooms[roomName].playing.push(player);
+            } else if (availableRooms[roomName].gameRunning == true) {
+                availableRooms[roomName].waiting.push(player);
+            } else if (availableRooms[roomName].activePlayers == 5) {
                 fullRooms[roomName] = availableRooms[roomName];
                 delete availableRooms[roomName];
             }
@@ -189,8 +187,8 @@ io.on('connection', function(socket) {
                 playerName: player.name,
                 playerValue: player.player_value
             };
-            console.log('New player connected with Data:' + JSON.stringify(playerToAdd));
-
+            console.log('New player connected with Data:and ROOM' + JSON.stringify(playerToAdd));
+            console.log('ROOMS Now= ', availableRooms[roomName])
             socket.emit('newPlayerAdd', playerToAdd);
         });
 
