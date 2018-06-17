@@ -26,8 +26,19 @@ const UserShema = new Schema({
         required: true,
 
     },
+    userType: {
+        type: String,
+        default: "user",
+        required: true,
+    },
+    isAuth: {
+        type: Boolean,
+        default: false,
+        required: true,
+    }
 
 });
+
 
 UserShema.statics = {
     insert: function(signupData) {
@@ -38,7 +49,7 @@ UserShema.statics = {
                 email: signupData.email,
                 currentMoney: "1000",
                 password: signupData.password,
-            }
+            };
             this.create(obj)
                 .then(data => {
                     return resolve(data);

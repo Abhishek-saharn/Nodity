@@ -10,6 +10,7 @@
     "author": "abhishek",
     "license": "ISC",
     "dependencies": {
+        "md5": "^2.2.1",
         "mongoose": "^5.0.13",
         "shortid": "^2.2.8",
         "socket.io": "^2.0.4"

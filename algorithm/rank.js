@@ -1,6 +1,6 @@
 var utils = require('./utils');
 var winner = require('./winner');
-var rank = function(players) {
+var findRank = function(players) {
     var trioCards = [];
     var straigntRunCards = [];
     var normalRunCards = [];
@@ -61,6 +61,19 @@ var rank = function(players) {
         return winner.highCardWinner(highCards);
     }
 
+
+}
+
+var rank = function(players) {
+
+    return new Promise((resolve, reject) => {
+        let winner = findRank(players);
+        if (winner != undefined) {
+            return resolve(winner);
+        } else {
+            return reject("Error! Winner could not be found. Try Again!");
+        }
+    });
 
 }
 

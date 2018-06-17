@@ -1,11 +1,12 @@
 const userDataService = require('../data_services/userDataService');
+const md5 = require('md5');
 const userController = {
     insert: function(data) {
         console.log(`In controller.`);
         const signupData = {
             userName: data.userName,
             email: data.email,
-            password: data.password,
+            password: md5(data.password),
         }
 
         return new Promise((resolve, reject) => {
@@ -19,7 +20,7 @@ const userController = {
         console.log(data)
         const loginData = {
             email: data.email,
-            password: data.password,
+            password: md5(data.password),
         }
 
         return new Promise((resolve, reject) => {
