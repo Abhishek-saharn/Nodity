@@ -11,7 +11,7 @@ console.log("server Connected");
 
 mongoose.connect(config.database, function(error) {
     if (error) {
-        console.log('Please make sure mongo DB is running');
+        console.log('Please make sure mongoDB is running');
         throw error;
     } else {
         console.log('Mongo is running');
@@ -48,7 +48,7 @@ io.on('connection', function(socket) {
                 socket.emit('signupSuccess', successData);
             })
             .catch(error => {
-                socket.emit('error', { errorMessage: "Something wrong has happened. Try again." })
+                socket.emit('error', { error: "Something wrong has happened. Try again." })
             });
 
     });
@@ -62,7 +62,7 @@ io.on('connection', function(socket) {
             })
             .catch(error => {
                 console.log(error);
-                socket.emit('error', { errorMessage: error });
+                socket.emit('error', { error: error });
             });
 
     });
@@ -85,24 +85,44 @@ io.on('connection', function(socket) {
             player.status = "playing";
             allRooms[roomName].deck_of_cards = shuffle();
             socket.join(roomName);
+            emitRoom()
+                .then((rooms) => {
+                    socket.broadcast.emit('showTable', rooms);
+                }).catch((error) => {
+                    socket.broadcast.emit('error', { error: error });
+                });
+            setTimeout(() => {
+                if (allRooms[roomName].activePlayers > 1) {
+                    allRooms[roomName].gameRunning = true;
+                    socket.emit('approveTable');
+                } else if (allRooms[roomName].activePlayers == 1) {
+                    socket.emit('rejectTable');
+                }
+            }, 15000)
         } else if (newTable == false) {
 
-            if (player.room != undefined) {
-                socket.leave(player.room);
-            }
-            socket.join(roomName);
-            currentSocket = roomName;
-            allRooms[roomName].activePlayers += 1;
-            if (allRooms[roomName].activePlayers == 2) {
-                allRooms[roomName].gameRunning = true;
-                allRooms[roomName].playing.push(player);
-                player.status = "playing";
+            if (allRooms[roomName].activePlayers < 5) {
 
-            } else if (allRooms[roomName].gameRunning == true) {
-                allRooms[roomName].waiting.push(player);
-                player.status = "waiting";
 
+                if (player.room != undefined) {
+                    socket.leave(player.room);
+                }
+                socket.join(roomName);
+                allRooms[roomName].activePlayers += 1;
+
+                if (allRooms[roomName].gameRunning == true) {
+                    allRooms[roomName].waiting.push(player);
+                    player.status = "waiting";
+                } else {
+
+                    allRooms[roomName].playing.push(player);
+                    player.status = "playing";
+
+                }
+            } else {
+                socket.emit('error', { error: "Room full" });
             }
+
         }
 
         // Crop first three elements and and push them to after sorting.
@@ -238,9 +258,10 @@ io.on('connection', function(socket) {
         // console.log(socket.allRooms[1])
 
     });
-    socket.on('showTable', function(data) {
-        let keys = []
-        let availableRooms = Object.keys(allRooms).filter(key => {
+    let emitRoom = function() {
+        let keys = [];
+        let availableRooms = [];
+        availableRooms = Object.keys(allRooms).filter(key => {
             if (allRooms[key].activePlayers < 5) return key;
         }).reduce((obj, key) => {
             obj[key] = allRooms[key];
@@ -250,11 +271,25 @@ io.on('connection', function(socket) {
         rooms = {
             keys: keys,
             availableRooms
-
         };
+
         console.log(rooms);
 
-        socket.emit('showTable', rooms);
+        return new Promise((resolve, reject) => {
+            if (rooms != undefined) {
+                return resolve(rooms);
+            } else {
+                return reject("Rooms not created");
+            }
+        });
+
+    }
+    socket.on('showTable', function(data) {
+        emitRoom().then((rooms) => {
+            socket.emit('showTable', rooms);
+        }).catch((error) => {
+            socket.emit('error', { error: error });
+        });
     });
     socket.on('joinRoom', function(data) {
         let roomName = data.roomName;
