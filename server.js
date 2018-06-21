@@ -94,11 +94,11 @@ io.on('connection', function(socket) {
             setTimeout(() => {
                 if (allRooms[roomName].activePlayers > 1) {
                     allRooms[roomName].gameRunning = true;
-                    socket.emit('approveTable');
+                    socket.emit('approveTable', { playerId: playerId });
                 } else if (allRooms[roomName].activePlayers == 1) {
                     socket.emit('rejectTable');
                 }
-            }, 15000)
+            }, 40000)
         } else if (newTable == false) {
 
             if (allRooms[roomName].activePlayers < 5) {
@@ -299,6 +299,20 @@ io.on('connection', function(socket) {
         socket.join(roomName);
         currentSocket = roomName;
         allRooms[roomName].activePlayers += 1;
+    });
+
+    socket.on('onPack', function(data) {
+        let packingPlayer = {};
+        packingPlayer.id = data.playerId;
+        allRooms[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => {
+            if (packingPlayer.id == playerObj.id) {
+                packingPlayer = playerObj
+            }
+            return playerObj.id != packingPlayer.id;
+
+        });
+
+
     });
 
     socket.on('disconnect', function() {
