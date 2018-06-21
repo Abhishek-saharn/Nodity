@@ -312,6 +312,7 @@ io.on('connection', function(socket) {
 
         });
 
+        allRooms[currentSocket].waiting.push(packingPlayer);
 
     });
 
