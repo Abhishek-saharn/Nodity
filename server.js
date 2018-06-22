@@ -347,7 +347,7 @@ io.on('connection', function(socket) {
                         allRooms[roomName].deck_of_cards.splice(0, 3);
 
                     }
-                    socket.broadcast.to(roomName).emit('approveTable', { playerId: playerId });
+                    socket.broadcast.to(roomName).emit('approveTable', { playerId: allRooms[currentSocket].playing[0] });
                 } else if (allRooms[roomName].activePlayers == 1) {
                     socket.emit('rejectTable');
                 }
