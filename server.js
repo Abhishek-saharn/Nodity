@@ -27,6 +27,7 @@ let tableValue = {
     money: 0
 };
 let i = 0;
+let currentBootValue;
 io.on('connection', function(socket) {
     console.log("Client Connected");
     let playerName = "";
@@ -37,6 +38,7 @@ io.on('connection', function(socket) {
     let playerId = "";
     let roomName = "";
     let currentSocket;
+    let isRestart = false;
 
     socket.on('SignUp', function(data) {
         userController.insert(data)
@@ -76,6 +78,7 @@ io.on('connection', function(socket) {
         if (newTable == true) {
             allRooms[roomName] = {};
             allRooms[roomName].bootValue = data.bootValue;
+            currentBootValue = allRooms[roomName].bootValue;
             allRooms[roomName].plotValue = data.plotValue;
             allRooms[roomName].activePlayers = 1;
             allRooms[roomName].gameRunning = false;
@@ -94,11 +97,11 @@ io.on('connection', function(socket) {
             setTimeout(() => {
                 if (allRooms[roomName].activePlayers > 1) {
                     allRooms[roomName].gameRunning = true;
-                    socket.emit('approveTable', { playerId: playerId });
+                    socket.broadcast.to(roomName).emit('approveTable', { playerId: playerId });
                 } else if (allRooms[roomName].activePlayers == 1) {
                     socket.emit('rejectTable');
                 }
-            }, 40000)
+            }, 40000);
         } else if (newTable == false) {
 
             if (allRooms[roomName].activePlayers < 5) {
@@ -170,7 +173,7 @@ io.on('connection', function(socket) {
                     }
                 }
                 io.to(roomName).emit('showWinner', { winnerName: winnerName });
-
+                allRooms[currentSocket].gameRunning = false;
                 console.log(winner + " is the winner");
 
             })
@@ -178,6 +181,8 @@ io.on('connection', function(socket) {
                 io.to(roomName).emit('error', { error: error });
             });
     });
+
+
 
     socket.on('nextTurn', function(data) {
         if (i == allRooms[roomName].playing.length) {
@@ -195,16 +200,16 @@ io.on('connection', function(socket) {
         player.player_value = data.playerValue;
         console.log('Client moved ');
         let chip_value = data.chipValue;
-        if (player.cardSeen == false && chip_value == 2 * allRooms[currentSocket].bootValue ||
-            player.cardSeen == true && chip_value == 4 * allRooms[currentSocket].bootValue) {
-            allRooms[currentSocket].bootValue *= 2;
+        if (player.cardSeen == false && chip_value == 2 * currentBootValue ||
+            player.cardSeen == true && chip_value == 4 * currentBootValue) {
+            currentBootValue *= 2;
         }
         let resdata = {
             tableValue: tableValue.money,
             playerID: player.id,
             playerValue: player.player_value,
             chipValue: chip_value,
-            bootValue: allRooms[currentSocket].bootValue
+            bootValue: currentBootValue
         };
         console.log('Client moved Table Value : ' + resdata.playerID);
         socket.broadcast.to(roomName).emit('move', resdata);
@@ -253,11 +258,6 @@ io.on('connection', function(socket) {
 
     });
 
-    socket.on('createNewRoom', function(data) {
-
-        // console.log(socket.allRooms[1])
-
-    });
     let emitRoom = function() {
         let keys = [];
         let availableRooms = [];
@@ -314,6 +314,59 @@ io.on('connection', function(socket) {
 
         allRooms[currentSocket].waiting.push(packingPlayer);
 
+    });
+    /**
+     * event respond to every new restart game.
+     */
+    socket.on('newGameRestart', function(data) {
+        if (allRooms[currentSocket].activePlayers != 0 && (allRooms[currentSocket].playing.length + allRooms[currentSocket].waiting.length <= 5)) {
+
+
+            setTimeout(() => {
+                if (allRooms[roomName].activePlayers > 1) {
+                    allRooms[roomName].gameRunning = true;
+                    if (allRooms[currentSocket].waiting.length != 0) {
+                        allRooms[currentSocket].playing.push(allRooms[currentSocket].waiting);
+                        allRooms[currentSocket].waiting = [];
+                    }
+                    currentBootValue = allRooms[currentSocket].bootValue;
+                    tableValue.money = 0;
+                    allRooms[currentSocket].deck_of_cards = shuffle();
+                    let unsorted_deck_of_cards = allRooms[currentSocket].deck_of_cards.slice(0, 3);
+                    allRooms[currentSocket].sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
+                        return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
+                    });
+
+                    for (let i = 0; i < allRooms[currentSocket].activePlayers; i++) {
+
+                        allRooms[currentSocket].playing[i].card1 = allRooms[currentSocket].sorted_deck_of_cards[0];
+                        allRooms[currentSocket].playing[i].card2 = allRooms[currentSocket].sorted_deck_of_cards[1];
+                        allRooms[currentSocket].playing[i].card3 = allRooms[currentSocket].sorted_deck_of_cards[2];
+                        allRooms[currentSocket].playing[i].cardSeen = false;
+                        allRooms[currentSocket].playing[i].status = "playing";
+                        allRooms[roomName].deck_of_cards.splice(0, 3);
+
+                    }
+                    socket.broadcast.to(roomName).emit('approveTable', { playerId: playerId });
+                } else if (allRooms[roomName].activePlayers == 1) {
+                    socket.emit('rejectTable');
+                }
+            }, 20000);
+
+
+        }
+    });
+
+    socket.on('changeTable', function(data) {
+        if (allRooms[currentSocket] != undefined && allRooms[currentSocket].playing != undefined) {
+            allRooms[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => playerObj.id != playerId);
+            allRooms[currentSocket].activePlayers--;
+            if (allRooms[currentSocket].activePlayers == 0) {
+                delete(allRooms[currentSocket]);
+            }
+            socket.broadcast.to(roomName).emit('disconnected', { id: playerId });
+
+        }
     });
 
     socket.on('disconnect', function() {
