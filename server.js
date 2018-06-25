@@ -105,10 +105,12 @@ io.on('connection', function(socket) {
              * After 40secs it will reject or approve that table.
              */
             setTimeout(() => {
+                console.log("Timer Function Executed");
                 if (allRooms[roomName].activePlayers > 1) {
                     allRooms[roomName].gameRunning = true;
                     let returnData = { playerId: playerId, restartGame: false }
-                    socket.broadcast.to(roomName).emit('approveTable', { returnData });
+                    console.log(roomName);        
+                    io.to(roomName).emit('approveTable', { returnData });
                 } else if (allRooms[roomName].activePlayers == 1) {
                     socket.emit('rejectTable');
                 }
@@ -190,9 +192,12 @@ io.on('connection', function(socket) {
 
                 restartNewGame()
                     .then((returnData) => {
-                        io.broadcast.to(roomName).emit('approveTable', { returnData });
+                        console.log("ready to emit app table");
+                        io.to(roomName).emit('approveTable', { returnData });
                     })
                     .catch((error) => {
+                        console.log("error emit app table");
+
                         socket.emit('rejectTable');
                     });
 
