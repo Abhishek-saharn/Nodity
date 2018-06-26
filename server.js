@@ -85,6 +85,7 @@ io.on('connection', function(socket) {
             allRooms[roomName].playing = [];
             allRooms[roomName].waiting = [];
             allRooms[roomName].playing.push(player);
+            
             player.status = "playing";
             allRooms[roomName].deck_of_cards = shuffle();
             socket.join(roomName);
@@ -172,8 +173,10 @@ io.on('connection', function(socket) {
         rank(allRooms[currentSocket].playing)
             .then(foundWinner => {
                 winner = foundWinner;
-                allRooms[currentSocket].playing.push(allRooms[currentSocket].waiting);
-                allRooms[currentSocket].waiting = [];
+                if(allRooms[currentSocket].waiting.length != 0){
+                    allRooms[currentSocket].playing.push(allRooms[currentSocket].waiting);
+                    allRooms[currentSocket].waiting = [];    
+                }
                 winnerDecided = true;
                 let playingArray = allRooms[currentSocket].playing;
                 for (let i = 0; i < playingArray.length; i++) {
@@ -190,16 +193,7 @@ io.on('connection', function(socket) {
                  * Now, New game have to restart. 
                  */
 
-                restartNewGame()
-                    .then((returnData) => {
-                        console.log("ready to emit app table");
-                        io.to(roomName).emit('approveTable', { returnData });
-                    })
-                    .catch((error) => {
-                        console.log("error emit app table");
-
-                        socket.emit('rejectTable');
-                    });
+                restartNewGame();
 
 
 
@@ -217,7 +211,7 @@ io.on('connection', function(socket) {
 
 
             setTimeout(() => {
-                return new Promise((resolve, reject) => {
+
                     if (allRooms[roomName].activePlayers > 1) {
                         allRooms[roomName].gameRunning = true;
                         winnerDecided = false;
@@ -245,19 +239,19 @@ io.on('connection', function(socket) {
                         }
 
                         let returnData = {
-                            playerId: allRooms[currentSocket].playing[0],
-                            restartGame: false,
+                            playerId: allRooms[currentSocket].playing[0].id,
+                            restartGame: true,
                             players: allRooms[currentSocket].playing,
                             bootValue: allRooms[currentSocket].bootValue,
                             plotValue: allRooms[currentSocket].plotValue,
                         }
-
-                        return resolve(returnData);
-
+                        console.log(allRooms[currentSocket].playing);
+                        io.to(roomName).emit('approveTable', { returnData });
+               
                     } else if (allRooms[roomName].activePlayers == 1) {
-                        return reject();
+                        socket.emit('rejectTable');
                     }
-                });
+               
 
             }, 20000);
 
@@ -269,7 +263,7 @@ io.on('connection', function(socket) {
 
 
     socket.on('nextTurn', function(data) {
-        if (i == allRooms[roomName].playing.length) {
+        if (i >= allRooms[roomName].playing.length) {
             i = 0;
         }
         if (!winnerDecided) {
