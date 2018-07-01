@@ -38,6 +38,7 @@ io.on('connection', function(socket) {
     let roomName = "";
     let currentSocket;
     let isRestart = false;
+    let standupFlag = false;
     let currentBootValue;
 
     socket.on('SignUp', function(data) {
@@ -174,21 +175,12 @@ io.on('connection', function(socket) {
         rank(allRooms[currentSocket].playing)
             .then(foundWinner => {
                 winner = foundWinner;
-                if (allRooms[currentSocket].waiting.length != 0) {
-                    let tempWait = [];
-                    allRooms[currentSocket].waiting.forEach(playerObj => {
-                        if (playerObj.standup == undefined || playerObj.standup == false) {
-                            allRooms[currentSocket].playing.push(playerObj);
-                        } else if (playerObj.standup != undefined && playerObj.standup == true) {
-                            tempWait.push(playerObj);
-                        }
-                    });
-                    allRooms[currentSocket].waiting = tempWait;
-                }
                 winnerDecided = true;
 
                 io.to(roomName).emit('showWinner', { winner });
+
                 allRooms[currentSocket].gameRunning = false;
+
                 console.log(winner.name + " is the winner");
 
                 /**
@@ -217,16 +209,25 @@ io.on('connection', function(socket) {
                 if (allRooms[roomName].activePlayers > 1) {
                     allRooms[roomName].gameRunning = true;
                     winnerDecided = false;
-                    if (allRooms[currentSocket].waiting.length != 0) {
-                        let tempWait = [];
-                        allRooms[currentSocket].waiting.forEach(playerObj => {
-                            if (playerObj.standup == undefined || playerObj.standup == false) {
-                                allRooms[currentSocket].playing.push(playerObj);
-                            } else if (playerObj.standup != undefined && playerObj.standup == true) {
+                    let tempWait = [];
+                    if (standupFlag == true) {
+                        standupFlag = false;
+                        allRoom[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => {
+                            if (playerObj.standup != undefined && playerObj.standup == true) {
                                 tempWait.push(playerObj);
+                                return false;
+                            } else {
+                                return true;
                             }
                         });
-                        allRooms[currentSocket].waiting = tempWait;
+                    }
+                    if (allRooms[currentSocket].waiting.length != 0) {
+
+                        allRooms[currentSocket].playing.push(waiting);
+                        allRooms[currentSocket].waiting = [];
+                    }
+                    if (standupFlag == true && tempWait.length != 0) {
+                        allRooms[currentSocket].waiting.push(tempWait);
                     }
                     currentBootValue = allRooms[currentSocket].bootValue;
                     tableValue.money = 0;
@@ -415,6 +416,7 @@ io.on('connection', function(socket) {
     });
 
     socket.on('standupTable', function() {
+        standupFlag = true;
         allRooms[currentSocket].playing.forEach(playerObj => {
             if (playerObj.id == playerId) {
                 playerObj.standup = true;
