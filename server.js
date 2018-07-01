@@ -417,42 +417,43 @@ io.on('connection', function(socket) {
 
     socket.on('standupTable', function() {
         standupFlag = true;
-        allRooms[currentSocket].playing.forEach(playerObj => {
-            if (playerObj.id == playerId) {
-                playerObj.standup = true;
+        for (let i = 0; i < allRooms[currentSocket].playing.length; i++) {
+            if (allRooms[currentSocket].playing[i].id == playerId) {
+                allRooms[currentSocket].playing[i].standup = true;
                 break;
             }
-        });
+        }
     });
 
     socket.on('sitTable', function() {
-        allRooms[currentSocket].waiting.forEach(playerObj => {
-            if (playerObj.id == playerId) {
-                playerObj.standup = false;
+        for (let i = 0; i < allRooms[currentSocket].playing.length; i++) {
+            if (allRooms[currentSocket].playing[i].id == playerId) {
+                allRooms[currentSocket].playing[i].standup = false;
                 break;
             }
-        });
-    });
-
-    socket.on('disconnect', function() {
-        players.splice(players.indexOf(playerId), 1);
-
-        if (allRooms[currentSocket] != undefined && allRooms[currentSocket].playing != undefined) {
-            allRooms[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => playerObj.id != playerId);
-            allRooms[currentSocket].activePlayers--;
-            if (allRooms[currentSocket].activePlayers == 0) {
-                delete(allRooms[currentSocket]);
-            }
-
         }
-
-
-        if (players.length == 0) {
-            tableValue.money = 0;
-        }
-
-        console.log("Player Disconnected");
-        socket.broadcast.to(roomName).emit('disconnected', { id: playerId });
     });
+});
+
+socket.on('disconnect', function() {
+players.splice(players.indexOf(playerId), 1);
+
+if (allRooms[currentSocket] != undefined && allRooms[currentSocket].playing != undefined) {
+    allRooms[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => playerObj.id != playerId);
+    allRooms[currentSocket].activePlayers--;
+    if (allRooms[currentSocket].activePlayers == 0) {
+        delete(allRooms[currentSocket]);
+    }
+
+}
+
+
+if (players.length == 0) {
+    tableValue.money = 0;
+}
+
+console.log("Player Disconnected");
+socket.broadcast.to(roomName).emit('disconnected', { id: playerId });
+});
 
 });
