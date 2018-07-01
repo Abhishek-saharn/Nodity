@@ -40,7 +40,7 @@ var findRank = function(players) {
             console.log(`Its pair cards for player ${player.id}`);
             console.log(">>>>>>>>>>");
             pairCards.push(player);
-        } else {
+        } else if (trioCards.length == 0 && straigntRunCards.length == 0 && normalRunCards.length == 0 && colorCards.length == 0 && pairCards.length == 0) {
             console.log(`Its high cards for player ${player.id}`);
             highCards.push(player);
         }
@@ -48,17 +48,29 @@ var findRank = function(players) {
     });
 
     if (trioCards.length != 0) {
-        return winner.trioWinner(trioCards);
+        let winnerData = winner.trioWinner(trioCards);
+        winnerData.winRule = "Trio Cards"
+        return winnerData;
     } else if (straigntRunCards.length != 0) {
-        return winner.straigntRunWinner(straigntRunCards);
+        let winnerData = winner.straigntRunWinner(straigntRunCards);
+        winnerData.winRule = "Straight Run"
+        return winnerData;
     } else if (normalRunCards.length != 0) {
-        return winner.normalRunWinner(normalRunCards);
+        let winnerData = winner.normalRunWinner(normalRunCards);
+        winnerData.winRule = "Normal Run"
+        return winnerData;
     } else if (colorCards.length != 0) {
-        return winner.colorWinner(colorCards);
+        let winnerData = winner.colorWinner(colorCards);
+        winnerData.winRule = "Same Color";
+        return winnerData;
     } else if (pairCards.length != 0) {
-        return winner.pairWinner(pairCards);
+        let winnerData = winner.pairWinner(pairCards);
+        winnerData.winRule = "Pair Cards";
+        return winnerData;
     } else if (highCards.length != 0) {
-        return winner.highCardWinner(highCards);
+        let winnerData = winner.highCardWinner(highCards);
+        winnerData.winRule = "High Cards";
+        return winnerData;
     }
 
 
@@ -67,9 +79,9 @@ var findRank = function(players) {
 var rank = function(players) {
 
     return new Promise((resolve, reject) => {
-        let winner = findRank(players);
-        if (winner != undefined) {
-            return resolve(winner);
+        let winnerData = findRank(players);
+        if (winnerData != undefined) {
+            return resolve(winnerData);
         } else {
             return reject("Error! Winner could not be found. Try Again!");
         }

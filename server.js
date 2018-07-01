@@ -85,7 +85,7 @@ io.on('connection', function(socket) {
             allRooms[roomName].playing = [];
             allRooms[roomName].waiting = [];
             allRooms[roomName].playing.push(player);
-            
+
             player.status = "playing";
             allRooms[roomName].deck_of_cards = shuffle();
             socket.join(roomName);
@@ -110,7 +110,7 @@ io.on('connection', function(socket) {
                 if (allRooms[roomName].activePlayers > 1) {
                     allRooms[roomName].gameRunning = true;
                     let returnData = { playerId: playerId, restartGame: false }
-                    console.log(roomName);        
+                    console.log(roomName);
                     io.to(roomName).emit('approveTable', { returnData });
                 } else if (allRooms[roomName].activePlayers == 1) {
                     socket.emit('rejectTable');
@@ -173,21 +173,15 @@ io.on('connection', function(socket) {
         rank(allRooms[currentSocket].playing)
             .then(foundWinner => {
                 winner = foundWinner;
-                if(allRooms[currentSocket].waiting.length != 0){
+                if (allRooms[currentSocket].waiting.length != 0) {
                     allRooms[currentSocket].playing.push(allRooms[currentSocket].waiting);
-                    allRooms[currentSocket].waiting = [];    
+                    allRooms[currentSocket].waiting = [];
                 }
                 winnerDecided = true;
-                let playingArray = allRooms[currentSocket].playing;
-                for (let i = 0; i < playingArray.length; i++) {
-                    if (playingArray[i].id == winner) {
-                        winnerName = playingArray[i].name;
-                        break;
-                    }
-                }
-                io.to(roomName).emit('showWinner', { winnerName: winnerName });
+
+                io.to(roomName).emit('showWinner', { winner });
                 allRooms[currentSocket].gameRunning = false;
-                console.log(winner + " is the winner");
+                console.log(winner.name + " is the winner");
 
                 /**
                  * Now, New game have to restart. 
@@ -212,46 +206,46 @@ io.on('connection', function(socket) {
 
             setTimeout(() => {
 
-                    if (allRooms[roomName].activePlayers > 1) {
-                        allRooms[roomName].gameRunning = true;
-                        winnerDecided = false;
-                        if (allRooms[currentSocket].waiting.length != 0) {
-                            allRooms[currentSocket].playing.push(allRooms[currentSocket].waiting);
-                            allRooms[currentSocket].waiting = [];
-                        }
-                        currentBootValue = allRooms[currentSocket].bootValue;
-                        tableValue.money = 0;
-                        allRooms[currentSocket].deck_of_cards = shuffle();
-
-                        for (let i = 0; i < allRooms[currentSocket].activePlayers; i++) {
-
-                            let unsorted_deck_of_cards = allRooms[currentSocket].deck_of_cards.slice(0, 3);
-                            allRooms[currentSocket].sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
-                                return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
-                            });
-                            allRooms[currentSocket].playing[i].card1 = allRooms[currentSocket].sorted_deck_of_cards[0];
-                            allRooms[currentSocket].playing[i].card2 = allRooms[currentSocket].sorted_deck_of_cards[1];
-                            allRooms[currentSocket].playing[i].card3 = allRooms[currentSocket].sorted_deck_of_cards[2];
-                            allRooms[currentSocket].playing[i].cardSeen = false;
-                            allRooms[currentSocket].playing[i].status = "playing";
-                            allRooms[roomName].deck_of_cards.splice(0, 3);
-
-                        }
-
-                        let returnData = {
-                            playerId: allRooms[currentSocket].playing[0].id,
-                            restartGame: true,
-                            players: allRooms[currentSocket].playing,
-                            bootValue: allRooms[currentSocket].bootValue,
-                            plotValue: allRooms[currentSocket].plotValue,
-                        }
-                        console.log(allRooms[currentSocket].playing);
-                        io.to(roomName).emit('approveTable', { returnData });
-               
-                    } else if (allRooms[roomName].activePlayers == 1) {
-                        socket.emit('rejectTable');
+                if (allRooms[roomName].activePlayers > 1) {
+                    allRooms[roomName].gameRunning = true;
+                    winnerDecided = false;
+                    if (allRooms[currentSocket].waiting.length != 0) {
+                        allRooms[currentSocket].playing.push(allRooms[currentSocket].waiting);
+                        allRooms[currentSocket].waiting = [];
                     }
-               
+                    currentBootValue = allRooms[currentSocket].bootValue;
+                    tableValue.money = 0;
+                    allRooms[currentSocket].deck_of_cards = shuffle();
+
+                    for (let i = 0; i < allRooms[currentSocket].activePlayers; i++) {
+
+                        let unsorted_deck_of_cards = allRooms[currentSocket].deck_of_cards.slice(0, 3);
+                        allRooms[currentSocket].sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
+                            return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
+                        });
+                        allRooms[currentSocket].playing[i].card1 = allRooms[currentSocket].sorted_deck_of_cards[0];
+                        allRooms[currentSocket].playing[i].card2 = allRooms[currentSocket].sorted_deck_of_cards[1];
+                        allRooms[currentSocket].playing[i].card3 = allRooms[currentSocket].sorted_deck_of_cards[2];
+                        allRooms[currentSocket].playing[i].cardSeen = false;
+                        allRooms[currentSocket].playing[i].status = "playing";
+                        allRooms[roomName].deck_of_cards.splice(0, 3);
+
+                    }
+
+                    let returnData = {
+                        playerId: allRooms[currentSocket].playing[0].id,
+                        restartGame: true,
+                        players: allRooms[currentSocket].playing,
+                        bootValue: allRooms[currentSocket].bootValue,
+                        plotValue: allRooms[currentSocket].plotValue,
+                    }
+                    console.log(allRooms[currentSocket].playing);
+                    io.to(roomName).emit('approveTable', { returnData });
+
+                } else if (allRooms[roomName].activePlayers == 1) {
+                    socket.emit('rejectTable');
+                }
+
 
             }, 20000);
 
