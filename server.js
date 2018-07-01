@@ -96,7 +96,7 @@ io.on('connection', function(socket) {
              */
             emitRoom()
                 .then((rooms) => {
-                    socket.broadcast.emit('showTable', rooms);
+                    io.emit('showTable', rooms);
                 }).catch((error) => {
                     socket.broadcast.emit('error', { error: error });
                 });
@@ -157,6 +157,7 @@ io.on('connection', function(socket) {
             player.card3 = allRooms[roomName].sorted_deck_of_cards[2];
             player.room = roomName;
             player.cardSeen = false;
+            player.standup = false;
             players.push(player);
             allRooms[roomName].deck_of_cards.splice(0, 3);
             let i_data = {
@@ -174,8 +175,15 @@ io.on('connection', function(socket) {
             .then(foundWinner => {
                 winner = foundWinner;
                 if (allRooms[currentSocket].waiting.length != 0) {
-                    allRooms[currentSocket].playing.push(allRooms[currentSocket].waiting);
-                    allRooms[currentSocket].waiting = [];
+                    let tempWait = [];
+                    allRooms[currentSocket].waiting.forEach(playerObj => {
+                        if (playerObj.standup == undefined || playerObj.standup == false) {
+                            allRooms[currentSocket].playing.push(playerObj);
+                        } else if (playerObj.standup != undefined && playerObj.standup == true) {
+                            tempWait.push(playerObj);
+                        }
+                    });
+                    allRooms[currentSocket].waiting = tempWait;
                 }
                 winnerDecided = true;
 
@@ -210,8 +218,15 @@ io.on('connection', function(socket) {
                     allRooms[roomName].gameRunning = true;
                     winnerDecided = false;
                     if (allRooms[currentSocket].waiting.length != 0) {
-                        allRooms[currentSocket].playing.push(allRooms[currentSocket].waiting);
-                        allRooms[currentSocket].waiting = [];
+                        let tempWait = [];
+                        allRooms[currentSocket].waiting.forEach(playerObj => {
+                            if (playerObj.standup == undefined || playerObj.standup == false) {
+                                allRooms[currentSocket].playing.push(playerObj);
+                            } else if (playerObj.standup != undefined && playerObj.standup == true) {
+                                tempWait.push(playerObj);
+                            }
+                        });
+                        allRooms[currentSocket].waiting = tempWait;
                     }
                     currentBootValue = allRooms[currentSocket].bootValue;
                     tableValue.money = 0;
@@ -397,6 +412,24 @@ io.on('connection', function(socket) {
             socket.broadcast.to(roomName).emit('disconnected', { id: playerId });
 
         }
+    });
+
+    socket.on('standupTable', function() {
+        allRooms[currentSocket].playing.forEach(playerObj => {
+            if (playerObj.id == playerId) {
+                playerObj.standup = true;
+                break;
+            }
+        });
+    });
+
+    socket.on('sitTable', function() {
+        allRooms[currentSocket].waiting.forEach(playerObj => {
+            if (playerObj.id == playerId) {
+                playerObj.standup = false;
+                break;
+            }
+        });
     });
 
     socket.on('disconnect', function() {
