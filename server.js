@@ -113,6 +113,7 @@ io.on('connection', function(socket) {
                     console.log(roomName);
                     io.to(roomName).emit('approveTable', { returnData });
                 } else if (allRooms[roomName].activePlayers == 1) {
+                    delete(allRooms[currentSocket]);
                     socket.emit('rejectTable');
                 }
             }, 40000);
@@ -209,7 +210,9 @@ io.on('connection', function(socket) {
                     allRooms[roomName].gameRunning = true;
                     winnerDecided = false;
                     let tempWait = [];
-
+                    /**
+                     * First filter playing array and then waiting array. Remove those players having Standup = 1
+                     */
                     allRoom[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => {
                         if (playerObj.standup != undefined && playerObj.standup == true) {
                             tempWait.push(playerObj);
@@ -264,6 +267,7 @@ io.on('connection', function(socket) {
                     io.to(roomName).emit('approveTable', { returnData });
 
                 } else if (allRooms[roomName].activePlayers == 1) {
+                    delete(allRooms[currentSocket]);
                     socket.emit('rejectTable');
                 }
 
