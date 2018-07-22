@@ -38,7 +38,6 @@ io.on('connection', function(socket) {
     let roomName = "";
     let currentSocket;
     let isRestart = false;
-    let standupFlag = false;
     let currentBootValue;
 
     socket.on('SignUp', function(data) {
@@ -114,6 +113,7 @@ io.on('connection', function(socket) {
                     console.log(roomName);
                     io.to(roomName).emit('approveTable', { returnData });
                 } else if (allRooms[roomName].activePlayers == 1) {
+                    delete(allRooms[currentSocket]);
                     socket.emit('rejectTable');
                 }
             }, 40000);
@@ -210,9 +210,20 @@ io.on('connection', function(socket) {
                     allRooms[roomName].gameRunning = true;
                     winnerDecided = false;
                     let tempWait = [];
-                    if (standupFlag == true) {
-                        standupFlag = false;
-                        allRoom[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => {
+                    /**
+                     * First filter playing array and then waiting array. Remove those players having Standup = 1
+                     */
+                    allRoom[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => {
+                        if (playerObj.standup != undefined && playerObj.standup == true) {
+                            tempWait.push(playerObj);
+                            return false;
+                        } else {
+                            return true;
+                        }
+                    });
+
+                    if (allRooms[currentSocket].waiting.length != 0) {
+                        allRoom[currentSocket].waiting = allRooms[currentSocket].waiting.filter(playerObj => {
                             if (playerObj.standup != undefined && playerObj.standup == true) {
                                 tempWait.push(playerObj);
                                 return false;
@@ -220,13 +231,10 @@ io.on('connection', function(socket) {
                                 return true;
                             }
                         });
-                    }
-                    if (allRooms[currentSocket].waiting.length != 0) {
-
                         allRooms[currentSocket].playing.push(waiting);
                         allRooms[currentSocket].waiting = [];
                     }
-                    if (standupFlag == true && tempWait.length != 0) {
+                    if (tempWait.length != 0) {
                         allRooms[currentSocket].waiting.push(tempWait);
                     }
                     currentBootValue = allRooms[currentSocket].bootValue;
@@ -259,6 +267,7 @@ io.on('connection', function(socket) {
                     io.to(roomName).emit('approveTable', { returnData });
 
                 } else if (allRooms[roomName].activePlayers == 1) {
+                    delete(allRooms[currentSocket]);
                     socket.emit('rejectTable');
                 }
 
@@ -435,25 +444,25 @@ io.on('connection', function(socket) {
     });
 
 
-socket.on('disconnect', function() {
-players.splice(players.indexOf(playerId), 1);
+    socket.on('disconnect', function() {
+        players.splice(players.indexOf(playerId), 1);
 
-if (allRooms[currentSocket] != undefined && allRooms[currentSocket].playing != undefined) {
-    allRooms[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => playerObj.id != playerId);
-    allRooms[currentSocket].activePlayers--;
-    if (allRooms[currentSocket].activePlayers == 0) {
-        delete(allRooms[currentSocket]);
-    }
+        if (allRooms[currentSocket] != undefined && allRooms[currentSocket].playing != undefined) {
+            allRooms[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => playerObj.id != playerId);
+            allRooms[currentSocket].activePlayers--;
+            if (allRooms[currentSocket].activePlayers == 0) {
+                delete(allRooms[currentSocket]);
+            }
 
-}
+        }
 
 
-if (players.length == 0) {
-    tableValue.money = 0;
-}
+        if (players.length == 0) {
+            tableValue.money = 0;
+        }
 
-console.log("Player Disconnected");
-socket.broadcast.to(roomName).emit('disconnected', { id: playerId });
-});
+        console.log("Player Disconnected");
+        socket.broadcast.to(roomName).emit('disconnected', { id: playerId });
+    });
 
 });
