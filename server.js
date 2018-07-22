@@ -430,10 +430,10 @@ io.on('connection', function(socket) {
             if (allRooms[currentSocket].playing[i].id == playerId) {
                 allRooms[currentSocket].playing[i].standup = false;
                 break;
-            }
+            } 
         }
     });
-});
+
 
 socket.on('disconnect', function() {
 players.splice(players.indexOf(playerId), 1);
