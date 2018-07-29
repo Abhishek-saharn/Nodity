@@ -138,7 +138,7 @@ io.on('connection', function(socket) {
 
                 }
             } else {
-                socket.emit('error', { error: "Room full" });
+               // socket.emit('error', { error: "Room full" });
             }
 
         }
@@ -164,7 +164,7 @@ io.on('connection', function(socket) {
             let i_data = {
                 table_data: tableValue,
                 player_data: player
-            };
+            };1
             socket.emit('connectionBegin', i_data);
         }
 
@@ -205,25 +205,15 @@ io.on('connection', function(socket) {
 
 
             setTimeout(() => {
-
-                if (allRooms[roomName].activePlayers > 1) {
-                    allRooms[roomName].gameRunning = true;
-                    winnerDecided = false;
-                    let tempWait = [];
-                    /**
-                     * First filter playing array and then waiting array. Remove those players having Standup = 1
-                     */
-                    allRoom[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => {
-                        if (playerObj.standup != undefined && playerObj.standup == true) {
-                            tempWait.push(playerObj);
-                            return false;
-                        } else {
-                            return true;
-                        }
-                    });
-
-                    if (allRooms[currentSocket].waiting.length != 0) {
-                        allRoom[currentSocket].waiting = allRooms[currentSocket].waiting.filter(playerObj => {
+                if(allRooms[roomName] != undefined){
+                    if (allRooms[roomName].activePlayers > 1) {
+                        allRooms[roomName].gameRunning = true;
+                        winnerDecided = false;
+                        let tempWait = [];
+                        /**
+                         * First filter playing array and then waiting array. Remove those players having Standup = 1
+                         */
+                        allRooms[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => {
                             if (playerObj.standup != undefined && playerObj.standup == true) {
                                 tempWait.push(playerObj);
                                 return false;
@@ -231,47 +221,59 @@ io.on('connection', function(socket) {
                                 return true;
                             }
                         });
-                        allRooms[currentSocket].playing.push(waiting);
-                        allRooms[currentSocket].waiting = [];
+    
+                        if (allRooms[currentSocket].waiting.length != 0) {
+                            allRooms[currentSocket].waiting = allRooms[currentSocket].waiting.filter(playerObj => {
+                                if (playerObj.standup != undefined && playerObj.standup == true) {
+                                    tempWait.push(playerObj);
+                                    return false;
+                                } else {
+                                    allRooms[currentSocket].playing.push(playerObj);
+                                    return true;
+                                }
+                            });
+                            allRooms[currentSocket].waiting = [];
+                        }
+                        if (tempWait.length != 0) {
+                            tempWait.forEach(player => {
+                                allRooms[currentSocket].waiting.push(player);
+                            });
+                            tempWait = [];
+                        }
+                        currentBootValue = allRooms[currentSocket].bootValue;
+                        tableValue.money = 0;
+                        allRooms[currentSocket].deck_of_cards = shuffle();
+    
+                        for (let i = 0; i < allRooms[currentSocket].activePlayers; i++) {
+    
+                            let unsorted_deck_of_cards = allRooms[currentSocket].deck_of_cards.slice(0, 3);
+                            allRooms[currentSocket].sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
+                                return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
+                            });
+                            allRooms[currentSocket].playing[i].card1 = allRooms[currentSocket].sorted_deck_of_cards[0];
+                            allRooms[currentSocket].playing[i].card2 = allRooms[currentSocket].sorted_deck_of_cards[1];
+                            allRooms[currentSocket].playing[i].card3 = allRooms[currentSocket].sorted_deck_of_cards[2];
+                            allRooms[currentSocket].playing[i].cardSeen = false;
+                            allRooms[currentSocket].playing[i].status = "playing";
+                            allRooms[roomName].deck_of_cards.splice(0, 3);
+    
+                        }
+    
+                        let returnData = {
+                            playerId: allRooms[currentSocket].playing[0].id,
+                            restartGame: true,
+                            players: allRooms[currentSocket].playing,
+                            bootValue: allRooms[currentSocket].bootValue,
+                            plotValue: allRooms[currentSocket].plotValue,
+                        }
+                        console.log(allRooms[currentSocket].playing);
+                        io.to(roomName).emit('approveTable', { returnData });
+    
+                    } else if (allRooms[roomName].activePlayers == 1) {
+                        delete(allRooms[currentSocket]);
+                        socket.emit('rejectTable');
                     }
-                    if (tempWait.length != 0) {
-                        allRooms[currentSocket].waiting.push(tempWait);
-                    }
-                    currentBootValue = allRooms[currentSocket].bootValue;
-                    tableValue.money = 0;
-                    allRooms[currentSocket].deck_of_cards = shuffle();
-
-                    for (let i = 0; i < allRooms[currentSocket].activePlayers; i++) {
-
-                        let unsorted_deck_of_cards = allRooms[currentSocket].deck_of_cards.slice(0, 3);
-                        allRooms[currentSocket].sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
-                            return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
-                        });
-                        allRooms[currentSocket].playing[i].card1 = allRooms[currentSocket].sorted_deck_of_cards[0];
-                        allRooms[currentSocket].playing[i].card2 = allRooms[currentSocket].sorted_deck_of_cards[1];
-                        allRooms[currentSocket].playing[i].card3 = allRooms[currentSocket].sorted_deck_of_cards[2];
-                        allRooms[currentSocket].playing[i].cardSeen = false;
-                        allRooms[currentSocket].playing[i].status = "playing";
-                        allRooms[roomName].deck_of_cards.splice(0, 3);
-
-                    }
-
-                    let returnData = {
-                        playerId: allRooms[currentSocket].playing[0].id,
-                        restartGame: true,
-                        players: allRooms[currentSocket].playing,
-                        bootValue: allRooms[currentSocket].bootValue,
-                        plotValue: allRooms[currentSocket].plotValue,
-                    }
-                    console.log(allRooms[currentSocket].playing);
-                    io.to(roomName).emit('approveTable', { returnData });
-
-                } else if (allRooms[roomName].activePlayers == 1) {
-                    delete(allRooms[currentSocket]);
-                    socket.emit('rejectTable');
                 }
-
-
             }, 20000);
 
 
