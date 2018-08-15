@@ -60,6 +60,7 @@ io.on('connection', function(socket) {
             .then(successData => {
                 playerName = successData.userName;
                 playerValue = successData.currentMoney;
+                console.log(successData)
                 socket.emit('loginSuccess', successData);
             })
             .catch(error => {
@@ -301,6 +302,7 @@ io.on('connection', function(socket) {
         if (player.cardSeen == false && chip_value == 2 * currentBootValue ||
             player.cardSeen == true && chip_value == 4 * currentBootValue) {
             currentBootValue *= 2;
+            socket.broadcast.to(currentSocket).emit(changeBootValue , {currentBootValue: currentBootValue});
         }
         let resdata = {
             tableValue: tableValue.money,
