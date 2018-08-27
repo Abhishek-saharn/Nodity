@@ -533,22 +533,23 @@ io.on('connection', function(socket) {
         /**
          * update final money to DB
          */
-
-        const gameData = {
-            gameId: gameId,
-            playerId: player.playerObjectId,
-            finalMoney: player.playerValue
+        if(gameId != ""){
+            const gameData = {
+                gameId: gameId,
+                playerId: player.playerObjectId,
+                finalMoney: player.playerValue
+            }
+            gameController.update(gameData)
+                .then(successData => {
+                    console.log("Updated Game with data:")
+                    console.log(successData);
+    
+                })
+                .catch(error => {
+                    console.log("NOT updated game with ERROR:")
+                    console.log(error);
+                })
         }
-        gameController.update(gameData)
-            .then(successData => {
-                console.log("Updated Game with data:")
-                console.log(successData);
-
-            })
-            .catch(error => {
-                console.log("NOT updated game with ERROR:")
-                console.log(error);
-            })
 
         if (allRooms[currentSocket] != undefined && allRooms[currentSocket].playing != undefined) {
             allRooms[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => playerObj.id != playerId);

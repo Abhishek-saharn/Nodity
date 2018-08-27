@@ -14,7 +14,7 @@ gameSchema.statics = {
         return new Promise((resolve, reject) => {
             const obj = {
                 tableName: gameData.tableName,
-                playerId: Schema.Types.ObjectId(gameData.playerId),
+                playerId: mongoose.Types.ObjectId(gameData.playerId),
                 initialMoney: gameData.initialMoney,
                 finalMoney: 0
 
@@ -31,10 +31,13 @@ gameSchema.statics = {
         })
     },
     update: function(updateData) {
+        console.log(">>>>>>>>>>>>")
+        console.log(updateData.gameId)
+        console.log(updateData.gameId)
         return new Promise((resolve, reject) => {
             this.update({
-                    _id: Schema.Types.ObjectId(updateData.gameId),
-                    playerId: Schema.Types.ObjectId(updateData.playerId)
+                    _id: mongoose.Types.ObjectId(updateData.gameId),
+                    playerId: mongoose.Types.ObjectId(updateData.playerId)
                 }, {
                     $set: {
                         finalMoney: updateData.finalMoney
