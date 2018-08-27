@@ -16,7 +16,7 @@ const userController = {
         });
 
     },
-    find: function(data) {
+    findUser: function(data) {
         console.log(data)
         const loginData = {
             email: data.email,
@@ -24,7 +24,7 @@ const userController = {
         }
 
         return new Promise((resolve, reject) => {
-            userDataService.find(loginData)
+            userDataService.findUser(loginData)
                 .then(successData => resolve(successData))
                 .catch(error => reject(error));
         });

@@ -3,8 +3,6 @@ const User = require('../models/User');
 const userDataService = {
     insert: function(signupData) {
 
-        console.log(`>>>>>>> ${JSON.stringify(signupData)}`);
-
         return new Promise((resolve, reject) => {
             User.insert(signupData)
                 .then(successData => resolve(signupData))
@@ -14,7 +12,7 @@ const userDataService = {
                 });
         });
     },
-    find: function(loginData) {
+    findUser: function(loginData) {
 
         return new Promise((resolve, reject) => {
             User.findUser(loginData)

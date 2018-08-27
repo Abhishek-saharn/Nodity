@@ -1,6 +1,8 @@
 const shuffle = require('./utilities/shuffle');
 const rank = require('./algorithm/rank');
 const userController = require('./app_controller/userController');
+const tableController = require('./app_controller/tableController');
+const gameController = require('./app_controller/gameController');
 const shortid = require('shortid');
 let mongoose = require("mongoose");
 mongoose.Promise = global.Promise;
@@ -31,14 +33,14 @@ io.on('connection', function(socket) {
     console.log("Client Connected");
     let playerName = "";
     let playerValue = "";
+    let playerObjectId = "";
     let winnerDecided = false;
-    let nextTurn = false;
     let player = {};
     let playerId = "";
     let roomName = "";
     let currentSocket;
-    let isRestart = false;
     let currentBootValue;
+    let gameId = "";
 
     socket.on('SignUp', function(data) {
         userController.insert(data)
@@ -46,7 +48,7 @@ io.on('connection', function(socket) {
                 console.log(`SignupSuccess`);
                 playerName = successData.userName;
                 playerValue = successData.currentMoney;
-                //console.log(player)
+                playerObjectId = successData._id;
                 socket.emit('signupSuccess', successData);
             })
             .catch(error => {
@@ -56,10 +58,11 @@ io.on('connection', function(socket) {
     });
 
     socket.on('Login', function(data) {
-        userController.find(data)
+        userController.findUser(data)
             .then(successData => {
                 playerName = successData.userName;
                 playerValue = successData.currentMoney;
+                playerObjectId = successData._id;
                 console.log(successData)
                 socket.emit('loginSuccess', successData);
             })
@@ -112,7 +115,21 @@ io.on('connection', function(socket) {
                     allRooms[roomName].gameRunning = true;
                     let returnData = { playerId: playerId, restartGame: false }
                     console.log(roomName);
-                    io.to(roomName).emit('approveTable', { returnData });
+                    let saveTableData = {
+                        tableName: roomName,
+                        initialBootValue: allRooms[roomName].bootValue,
+                        plotValue: allRooms[roomName].plotValue
+                    }
+                    tableController.insert(saveTableData)
+                        .then(successData => {
+                            console.log('Table Data Save in DB');
+                            io.to(roomName).emit('approveTable', { returnData });
+                        })
+                        .catch(error => {
+                            console.log("Error while Saving table in DB: " + error);
+                            delete(allRooms[currentSocket]);
+                            socket.emit('rejectTable');
+                        });
                 } else if (allRooms[roomName].activePlayers == 1) {
                     delete(allRooms[currentSocket]);
                     socket.emit('rejectTable');
@@ -139,7 +156,7 @@ io.on('connection', function(socket) {
 
                 }
             } else {
-               // socket.emit('error', { error: "Room full" });
+                // socket.emit('error', { error: "Room full" });
             }
 
         }
@@ -160,12 +177,14 @@ io.on('connection', function(socket) {
             player.room = roomName;
             player.cardSeen = false;
             player.standup = false;
+            player.playerObjectId = playerObjectId;
             players.push(player);
             allRooms[roomName].deck_of_cards.splice(0, 3);
             let i_data = {
                 table_data: tableValue,
                 player_data: player
-            };1
+            };
+            1
             socket.emit('connectionBegin', i_data);
         }
 
@@ -183,6 +202,28 @@ io.on('connection', function(socket) {
                 allRooms[currentSocket].gameRunning = false;
 
                 console.log(winner.name + " is the winner");
+
+                /**
+                 * update final money to DB
+                 */
+
+                for (let i = 0; i < allRooms[currentSocket].activePlayers; i++) {
+                    const gameData = {
+                        gameId: gameId,
+                        playerId: allRooms[currentSocket].playing[i].playerObjectId,
+                        finalMoney: allRooms[currentSocket].playing[i].playerValue
+                    }
+                    gameController.update(gameData)
+                        .then(successData => {
+                            console.log("Updated Game with data:")
+                            console.log(successData);
+                        })
+                        .catch(error => {
+                            console.log("NOT updated game with ERROR:")
+                            console.log(error);
+                        })
+
+                };
 
                 /**
                  * Now, New game have to restart. 
@@ -206,7 +247,7 @@ io.on('connection', function(socket) {
 
 
             setTimeout(() => {
-                if(allRooms[roomName] != undefined){
+                if (allRooms[roomName] != undefined) {
                     if (allRooms[roomName].activePlayers > 1) {
                         allRooms[roomName].gameRunning = true;
                         winnerDecided = false;
@@ -222,7 +263,7 @@ io.on('connection', function(socket) {
                                 return true;
                             }
                         });
-    
+
                         if (allRooms[currentSocket].waiting.length != 0) {
                             allRooms[currentSocket].waiting = allRooms[currentSocket].waiting.filter(playerObj => {
                                 if (playerObj.standup != undefined && playerObj.standup == true) {
@@ -244,9 +285,9 @@ io.on('connection', function(socket) {
                         currentBootValue = allRooms[currentSocket].bootValue;
                         tableValue.money = 0;
                         allRooms[currentSocket].deck_of_cards = shuffle();
-    
+
                         for (let i = 0; i < allRooms[currentSocket].activePlayers; i++) {
-    
+
                             let unsorted_deck_of_cards = allRooms[currentSocket].deck_of_cards.slice(0, 3);
                             allRooms[currentSocket].sorted_deck_of_cards = unsorted_deck_of_cards.sort(function(a, b) {
                                 return (a['number'] < b['number']) ? -1 : (a['number'] > b['number']) ? 1 : 0;
@@ -257,19 +298,36 @@ io.on('connection', function(socket) {
                             allRooms[currentSocket].playing[i].cardSeen = false;
                             allRooms[currentSocket].playing[i].status = "playing";
                             allRooms[roomName].deck_of_cards.splice(0, 3);
-    
+
+                            const gameData = {
+                                tableName: currentSocket,
+                                playerId: allRooms[currentSocket].playing[i].playerObjectId,
+                                initialMoney: allRooms[currentSocket].playing[i].playerValue
+                            }
+                            gameController.insert(gameData)
+                                .then(successData => {
+                                    console.log("New Game Saved with data:")
+                                    console.log(successData);
+                                    let returnData = {
+                                        playerId: allRooms[currentSocket].playing[0].id,
+                                        restartGame: true,
+                                        players: allRooms[currentSocket].playing,
+                                        bootValue: allRooms[currentSocket].bootValue,
+                                        plotValue: allRooms[currentSocket].plotValue,
+                                    }
+                                    console.log(allRooms[currentSocket].playing);
+                                    gameId = successData._id;
+                                    io.to(roomName).emit('approveTable', { returnData });
+                                })
+                                .catch(error => {
+                                    console.log("New Game NOT Saved with ERROR:")
+                                    console.log(error);
+                                })
+
                         }
-    
-                        let returnData = {
-                            playerId: allRooms[currentSocket].playing[0].id,
-                            restartGame: true,
-                            players: allRooms[currentSocket].playing,
-                            bootValue: allRooms[currentSocket].bootValue,
-                            plotValue: allRooms[currentSocket].plotValue,
-                        }
-                        console.log(allRooms[currentSocket].playing);
-                        io.to(roomName).emit('approveTable', { returnData });
-    
+
+
+
                     } else if (allRooms[roomName].activePlayers == 1) {
                         delete(allRooms[currentSocket]);
                         socket.emit('rejectTable');
@@ -302,7 +360,7 @@ io.on('connection', function(socket) {
         if (player.cardSeen == false && chip_value == 2 * currentBootValue ||
             player.cardSeen == true && chip_value == 4 * currentBootValue) {
             currentBootValue *= 2;
-            socket.broadcast.to(currentSocket).emit(changeBootValue , {currentBootValue: currentBootValue});
+            socket.broadcast.to(currentSocket).emit(changeBootValue, { currentBootValue: currentBootValue });
         }
         let resdata = {
             tableValue: tableValue.money,
@@ -423,7 +481,29 @@ io.on('connection', function(socket) {
             if (allRooms[currentSocket].activePlayers == 0) {
                 delete(allRooms[currentSocket]);
             }
-            socket.broadcast.to(roomName).emit('disconnected', { id: playerId });
+
+            /**
+             * update final money to DB
+             */
+
+            const gameData = {
+                gameId: gameId,
+                playerId: player.playerObjectId,
+                finalMoney: player.playerValue
+            }
+            gameController.update(gameData)
+                .then(successData => {
+                    console.log("Updated Game with data:")
+                    console.log(successData);
+                    socket.broadcast.to(roomName).emit('disconnected', { id: playerId });
+
+                })
+                .catch(error => {
+                    console.log("NOT updated game with ERROR:")
+                    console.log(error);
+                })
+
+
 
         }
     });
@@ -443,13 +523,32 @@ io.on('connection', function(socket) {
             if (allRooms[currentSocket].playing[i].id == playerId) {
                 allRooms[currentSocket].playing[i].standup = false;
                 break;
-            } 
+            }
         }
     });
 
 
     socket.on('disconnect', function() {
         players.splice(players.indexOf(playerId), 1);
+        /**
+         * update final money to DB
+         */
+
+        const gameData = {
+            gameId: gameId,
+            playerId: player.playerObjectId,
+            finalMoney: player.playerValue
+        }
+        gameController.update(gameData)
+            .then(successData => {
+                console.log("Updated Game with data:")
+                console.log(successData);
+
+            })
+            .catch(error => {
+                console.log("NOT updated game with ERROR:")
+                console.log(error);
+            })
 
         if (allRooms[currentSocket] != undefined && allRooms[currentSocket].playing != undefined) {
             allRooms[currentSocket].playing = allRooms[currentSocket].playing.filter(playerObj => playerObj.id != playerId);
@@ -459,6 +558,7 @@ io.on('connection', function(socket) {
             }
 
         }
+
 
 
         if (players.length == 0) {

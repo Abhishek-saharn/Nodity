@@ -42,7 +42,6 @@ const UserShema = new Schema({
 
 UserShema.statics = {
     insert: function(signupData) {
-        console.log(signupData);
         return new Promise((resolve, reject) => {
             const obj = {
                 userName: signupData.userName,
